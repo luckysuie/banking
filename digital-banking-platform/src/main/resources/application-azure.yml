@@ -1,0 +1,77 @@
+# Microsoft Azure production profile — SQL Database, Key Vault, Entra ID, App Insights
+
+spring:
+  config:
+    import: optional:azure-keyvault:${AZURE_KEYVAULT_ENDPOINT:}
+
+  cloud:
+    azure:
+      keyvault:
+        secret:
+          property-sources:
+            - endpoint: ${AZURE_KEYVAULT_ENDPOINT}
+      credential:
+        managed-identity-enabled: true
+
+  datasource:
+    url: jdbc:sqlserver://${AZURE_SQL_SERVER}.database.windows.net:1433;database=${AZURE_SQL_DATABASE};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;
+    username: ${AZURE_SQL_USERNAME}
+    password: ${AZURE_SQL_PASSWORD}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  h2:
+    console:
+      enabled: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://login.microsoftonline.com/${AZURE_ENTRA_TENANT_ID}/v2.0
+          audiences: ${AZURE_ENTRA_API_CLIENT_ID}
+
+app:
+  security:
+    entra:
+      tenant-id: ${AZURE_ENTRA_TENANT_ID}
+      client-id: ${AZURE_ENTRA_API_CLIENT_ID}
+      roles-claim: roles
+  data:
+    initialize: ${APP_DATA_INITIALIZE:false}
+
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+
+logging:
+  level:
+    com.cloudbank.digitalbanking: INFO
+    com.azure: WARN

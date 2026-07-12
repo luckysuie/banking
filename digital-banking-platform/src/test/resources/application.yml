@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: digital-banking-platform-test
+  profiles:
+    active: test

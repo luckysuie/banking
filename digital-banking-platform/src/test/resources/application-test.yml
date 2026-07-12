@@ -1,0 +1,47 @@
+# Test profile — H2 in-memory, HTTP Basic, no Azure services
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:banking-test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  h2:
+    console:
+      enabled: false
+
+  flyway:
+    enabled: false
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+
+server:
+  port: 0
+  servlet:
+    context-path: /api
+
+app:
+  data:
+    initialize: false
+  security:
+    customer:
+      username: customer
+      password: test-customer-password
+    admin:
+      username: admin
+      password: test-admin-password
+
+logging:
+  level:
+    root: WARN
+    com.cloudbank.digitalbanking: INFO

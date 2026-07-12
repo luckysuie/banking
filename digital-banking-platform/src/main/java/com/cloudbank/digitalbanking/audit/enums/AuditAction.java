@@ -1,0 +1,12 @@
+package com.cloudbank.digitalbanking.audit.enums;
+
+public enum AuditAction {
+    CUSTOMER_CREATED,
+    CUSTOMER_PROFILE_UPDATED,
+    ACCOUNT_CREATED,
+    ACCOUNT_STATUS_CHANGED,
+    BENEFICIARY_CREATED,
+    PAYMENT_INITIATED,
+    PAYMENT_COMPLETED,
+    PAYMENT_FAILED
+}
