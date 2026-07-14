@@ -5,7 +5,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 
 /**
- * Shared authorization rules for local (HTTP Basic) and Azure (Entra JWT) profiles.
+ * Shared authorization rules for HTTP Basic auth (all profiles).
  */
 public final class SecurityRules {
 

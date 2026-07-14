@@ -2,7 +2,6 @@ import type { ApiResponse, ErrorResponse, PageResponse } from './types';
 import { apiBaseUrl } from '../config/env';
 
 const AUTH_KEY = 'cloudbank_auth';
-const BEARER_KEY = 'cloudbank_bearer';
 
 export function getStoredAuth(): string | null {
   return sessionStorage.getItem(AUTH_KEY);
@@ -13,17 +12,8 @@ export function setStoredAuth(username: string, password: string): void {
   sessionStorage.setItem(AUTH_KEY, token);
 }
 
-export function getBearerToken(): string | null {
-  return sessionStorage.getItem(BEARER_KEY);
-}
-
-export function setBearerToken(token: string): void {
-  sessionStorage.setItem(BEARER_KEY, token);
-}
-
 export function clearStoredAuth(): void {
   sessionStorage.removeItem(AUTH_KEY);
-  sessionStorage.removeItem(BEARER_KEY);
 }
 
 export class ApiError extends Error {
@@ -56,14 +46,11 @@ export async function apiRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const basicAuth = getStoredAuth();
-  const bearer = getBearerToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
-  if (bearer) {
-    headers.Authorization = `Bearer ${bearer}`;
-  } else if (basicAuth) {
+  if (basicAuth) {
     headers.Authorization = `Basic ${basicAuth}`;
   }
 

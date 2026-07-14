@@ -1,23 +1,39 @@
-# Microsoft Azure production profile — SQL Database, Key Vault, Entra ID, App Insights
+# Microsoft Azure production profile — SQL Database + Key Vault + HTTP Basic auth
+# JDBC URL + SQL credentials are loaded from Key Vault via managed identity:
+#   sql-jdbc-url       → sql.jdbc.url
+#   sql-admin-username → sql.admin.username
+#   sql-admin-password → sql.admin.password
 
 spring:
   config:
-    import: optional:azure-keyvault:${AZURE_KEYVAULT_ENDPOINT:}
+    import: optional:azure-keyvault://
 
   cloud:
     azure:
-      keyvault:
-        secret:
-          property-sources:
-            - endpoint: ${AZURE_KEYVAULT_ENDPOINT}
       credential:
         managed-identity-enabled: true
+      keyvault:
+        secret:
+          property-source-enabled: true
+          property-sources:
+            - name: cloudbank-keyvault
+              endpoint: ${AZURE_KEYVAULT_ENDPOINT}
+              secret-keys:
+                - sql-jdbc-url
+                - sql-admin-username
+                - sql-admin-password
+              credential:
+                managed-identity-enabled: true
 
   datasource:
-    url: jdbc:sqlserver://${AZURE_SQL_SERVER}.database.windows.net:1433;database=${AZURE_SQL_DATABASE};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;
-    username: ${AZURE_SQL_USERNAME}
-    password: ${AZURE_SQL_PASSWORD}
+    url: ${sql.jdbc.url}
+    username: ${sql.admin.username}
+    password: ${sql.admin.password}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
 
   jpa:
     open-in-view: false
@@ -37,19 +53,14 @@ spring:
     console:
       enabled: false
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: https://login.microsoftonline.com/${AZURE_ENTRA_TENANT_ID}/v2.0
-          audiences: ${AZURE_ENTRA_API_CLIENT_ID}
-
 app:
   security:
-    entra:
-      tenant-id: ${AZURE_ENTRA_TENANT_ID}
-      client-id: ${AZURE_ENTRA_API_CLIENT_ID}
-      roles-claim: roles
+    customer:
+      username: ${APP_SECURITY_CUSTOMER_USERNAME:customer}
+      password: ${APP_SECURITY_CUSTOMER_PASSWORD:changeme-customer}
+    admin:
+      username: ${APP_SECURITY_ADMIN_USERNAME:admin}
+      password: ${APP_SECURITY_ADMIN_PASSWORD:changeme-admin}
   data:
     initialize: ${APP_DATA_INITIALIZE:false}
 

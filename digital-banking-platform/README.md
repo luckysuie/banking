@@ -500,10 +500,10 @@ curl -u admin:changeme-admin \
 This is a **development demonstration** and has intentional gaps:
 
 - **Not production-ready** — No high-availability, clustering, or operational runbooks
-- **In-memory database** — Data is lost when the process stops (H2)
-- **HTTP Basic authentication** — In-memory users; no OAuth2/OIDC integration yet
+- **Local profile uses in-memory H2** — Data is lost when the process stops; Azure profile uses Azure SQL Persistent storage
+- **HTTP Basic authentication** — In-memory users on local and azure profiles; override passwords via env on App Service
 - **No resource ownership enforcement** — Authenticated users can access any UUID; production would map principals to customers
-- **Simplified security model** — H2 console and Swagger are publicly accessible in local configuration
+- **Simplified security model (local)** — H2 console and Swagger are publicly accessible in local configuration
 - **No external payment settlement** — External beneficiary transfers record a debit only; no third-party clearing
 - **Console-only notification delivery** — Notifications are persisted and printed to stdout, not emailed or pushed
 - **UUID references without FK constraints** — Orphaned references are possible if entities are removed
@@ -513,33 +513,33 @@ This is a **development demonstration** and has intentional gaps:
 
 ## Microsoft Azure Deployment
 
-The platform now supports a production **`azure`** Spring profile with full infrastructure-as-code.
+Production uses the **`azure`** Spring profile. SQL and Key Vault are configured in application code (`application-azure.yml`) — create the Azure resources in the Portal (or CLI), then wire App Service settings.
 
-| Component | Azure Service |
-|-----------|---------------|
-| Database | Azure SQL Database + Flyway migrations |
-| Secrets | Azure Key Vault (managed identity) |
-| Authentication | Microsoft Entra ID (JWT bearer tokens) |
-| API hosting | Azure App Service (Java 21) |
-| Web hosting | Azure App Service (Node 22) |
-| Entry point | Azure Front Door + CDN + WAF |
-| Load balancing | Application Gateway |
-| Networking | VNet, subnets, Azure Firewall |
-| VM access | Azure Bastion |
-| DR | Site Recovery vault |
-| Monitoring | Application Insights + Log Analytics |
+| Component | Azure Service | App integration |
+|-----------|---------------|-----------------|
+| Hosting | App Service (Java 21) | `SPRING_PROFILES_ACTIVE=azure` |
+| Database | Azure SQL Database | JDBC URL + credentials from Key Vault + Flyway |
+| Secrets | Key Vault | Managed identity loads `sql-jdbc-url`, `sql-admin-username`, `sql-admin-password` |
+| Auth | HTTP Basic | Same as local (`APP_SECURITY_*` env vars) |
 
-**Deploy infrastructure:**
+### How credentials work
+
+1. Create these Key Vault secrets:
+   - **`sql-jdbc-url`** — full JDBC URL (e.g. `jdbc:sqlserver://YOUR_SERVER.database.windows.net:1433;database=digitalbanking;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;`)
+   - **`sql-admin-username`** — Azure SQL admin username
+   - **`sql-admin-password`** — Azure SQL admin password
+2. Enable a **system-assigned managed identity** on the API App Service.
+3. Grant that identity **Key Vault Secrets User** on the vault.
+4. Set App Service settings from [`.env.azure.example`](.env.azure.example) (including `AZURE_KEYVAULT_ENDPOINT`).
+5. On startup, Spring maps secrets to `sql.jdbc.url` / `sql.admin.username` / `sql.admin.password` and binds them to the datasource.
+
+### Deploy the JAR
 
 ```bash
-cd infrastructure/azure
-# Edit main.parameters.json with your Entra IDs
-./scripts/deploy.ps1 -ResourceGroup rg-cloudbank-prod
+mvn clean package -DskipTests
+az webapp deploy --resource-group <rg> --name <api-app> \
+  --src-path target/digital-banking-platform-0.0.1-SNAPSHOT.jar --type jar
 ```
-
-**Run API on Azure:** set `SPRING_PROFILES_ACTIVE=azure` on App Service.
-
-See [`infrastructure/azure/README.md`](../infrastructure/azure/README.md) for the complete deployment guide, Entra ID app registration steps, and SQL admin script.
 
 ---
 

@@ -116,18 +116,6 @@
 
 
 
-        <!-- Azure: OAuth2 resource server for Microsoft Entra ID JWT -->
-
-        <dependency>
-
-            <groupId>org.springframework.boot</groupId>
-
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-
-        </dependency>
-
-
-
         <!-- Azure SQL Database -->
 
         <dependency>

@@ -13,8 +13,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -61,13 +59,6 @@ public class CustomerController {
     public ResponseEntity<ApiResponse<CustomerResponse>> getCustomerById(
             @Parameter(description = "Customer UUID") @PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.success(customerService.getCustomerById(id)));
-    }
-
-    @GetMapping("/me")
-    @Operation(summary = "Get current customer profile", description = "Resolves the customer from the Entra ID token email claim")
-    public ResponseEntity<ApiResponse<CustomerResponse>> getCurrentCustomer(Authentication authentication) {
-        String email = resolveAuthenticatedEmail(authentication);
-        return ResponseEntity.ok(ApiResponse.success(customerService.getCustomerByEmail(email)));
     }
 
     @GetMapping("/customer-number/{customerNumber}")
@@ -123,20 +114,5 @@ public class CustomerController {
             @Valid @RequestBody CustomerStatusUpdateRequest request) {
         CustomerResponse response = customerService.updateCustomerStatus(id, request.getStatus());
         return ResponseEntity.ok(ApiResponse.success("Customer status updated successfully", response));
-    }
-
-    private String resolveAuthenticatedEmail(Authentication authentication) {
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof Jwt jwt) {
-            String preferred = jwt.getClaimAsString("preferred_username");
-            if (preferred != null && preferred.contains("@")) {
-                return preferred;
-            }
-            String email = jwt.getClaimAsString("email");
-            if (email != null) {
-                return email;
-            }
-        }
-        throw new IllegalStateException("Authenticated principal does not contain an email claim");
     }
 }
