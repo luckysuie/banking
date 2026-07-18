@@ -7,7 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -24,6 +24,6 @@ public class AccountResponse {
     private BigDecimal currentBalance;
     private BigDecimal availableBalance;
     private BigDecimal dailyTransferLimit;
-    private Instant createdAt;
-    private Instant updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

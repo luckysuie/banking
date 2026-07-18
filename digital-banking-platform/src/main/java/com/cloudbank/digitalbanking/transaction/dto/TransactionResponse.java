@@ -7,7 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -27,5 +27,5 @@ public class TransactionResponse {
     private TransactionStatus status;
     private BigDecimal balanceBefore;
     private BigDecimal balanceAfter;
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 }

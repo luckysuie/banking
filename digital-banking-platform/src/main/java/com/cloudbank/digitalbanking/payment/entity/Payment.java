@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -61,5 +61,5 @@ public class Payment extends BaseEntity {
     @Column(length = 500)
     private String failureReason;
 
-    private Instant completedAt;
+    private LocalDateTime completedAt;
 }

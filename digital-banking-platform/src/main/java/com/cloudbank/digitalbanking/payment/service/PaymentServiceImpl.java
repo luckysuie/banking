@@ -37,8 +37,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
@@ -127,7 +127,7 @@ public class PaymentServiceImpl implements PaymentService {
         executeTransfer(sourceAccount, beneficiary, payment, request);
 
         payment.setStatus(PaymentStatus.COMPLETED);
-        payment.setCompletedAt(Instant.now());
+        payment.setCompletedAt(LocalDateTime.now());
         paymentRepository.save(payment);
 
         notificationService.notifyPaymentSuccess(
@@ -226,7 +226,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private void validateDailyTransferLimit(Account sourceAccount, BigDecimal transferAmount) {
-        Instant startOfDay = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
+        LocalDateTime startOfDay = LocalDate.now(ZoneOffset.UTC).atStartOfDay();
         BigDecimal transferredToday = paymentRepository.sumTransferAmountBySourceAccountSince(
                 sourceAccount.getId(), IN_FLIGHT_PAYMENT_STATUSES, startOfDay);
 

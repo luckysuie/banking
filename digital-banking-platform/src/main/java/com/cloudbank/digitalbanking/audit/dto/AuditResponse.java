@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -23,5 +23,5 @@ public class AuditResponse {
     private String description;
     private AuditResult result;
     private String correlationId;
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 }

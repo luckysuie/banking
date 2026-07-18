@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -25,6 +25,6 @@ public class PaymentResponse {
     private String idempotencyKey;
     private PaymentStatus status;
     private String failureReason;
-    private Instant createdAt;
-    private Instant completedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime completedAt;
 }

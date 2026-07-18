@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -41,5 +41,5 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     BigDecimal sumTransferAmountBySourceAccountSince(
             @Param("sourceAccountId") UUID sourceAccountId,
             @Param("statuses") Collection<PaymentStatus> statuses,
-            @Param("startOfDay") Instant startOfDay);
+            @Param("startOfDay") LocalDateTime startOfDay);
 }
