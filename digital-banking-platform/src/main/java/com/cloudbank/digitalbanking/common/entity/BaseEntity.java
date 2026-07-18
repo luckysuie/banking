@@ -11,7 +11,7 @@ import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -28,10 +28,10 @@ public abstract class BaseEntity {
     private UUID id;
 
     @Column(nullable = false, updatable = false)
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 
     @Column(nullable = false)
-    private Instant updatedAt;
+    private LocalDateTime updatedAt;
 
     /**
      * Optimistic lock version incremented on each update to prevent lost writes.
@@ -42,13 +42,13 @@ public abstract class BaseEntity {
 
     @PrePersist
     protected void onCreate() {
-        Instant now = Instant.now();
+        LocalDateTime now = LocalDateTime.now();
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = Instant.now();
+        updatedAt = LocalDateTime.now();
     }
 }
