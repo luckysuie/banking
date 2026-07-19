@@ -1,7 +1,7 @@
 ## Deploying the Banking Application to Azure
 ### Steps
 0. Fork the repository to your Github account. Repo URL : https://github.com/luckysuie/banking
-
+- Note: while using hte commands paste one after another 
 ### Login to Azure portal and open the Cloud Shell then run the following commands to create the required resources in Azure.
 ```bash
 az group create --name banking-rg --location CentralIndia
@@ -32,7 +32,7 @@ az role assignment create --assignee $USER_OBJECT_ID --role "Key Vault Administr
 az keyvault secret set --vault-name banking-kv --name "sql-jdbc-url" --value "jdbc:sqlserver://banking-sql-server8576.database.windows.net:1433;database=bankingdb;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;"
 az keyvault secret set --vault-name banking-kv --name "sql-admin-username" --value "adminuser"
 az keyvault secret set --vault-name banking-kv --name "sql-admin-password" --value "AdminPassword123!"
-``
+```
 
 ### create app service plan and web app
 ```bash
