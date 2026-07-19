@@ -1,4 +1,5 @@
-## Deploying the Banking Application to Azure
+# Azure Full Stack Digital Banking Platform with CI/CD
+## End-to-End Deployment using React, Spring Boot, Azure App Service, Azure SQL Database, Azure Key Vault, Managed Identity, and GitHub Actions
 ### Steps
 0. Fork the repository to your Github account. Repo URL : https://github.com/luckysuie/banking
 - Note: while using hte commands paste one after another 
@@ -144,8 +145,9 @@ jobs:
           name: java-app
           path: digital-banking-platform/target/*.jar
 ```
-    - IMP: DONT CHANGE THE DEPLOY SECTION
-    - Commit the changes to the main branch
+
+ - IMP: DONT CHANGE THE DEPLOY SECTION
+ - Commit the changes to the main branch
 
 3. Workflow checking
     - Click on the github actions buttion on your repository
@@ -153,10 +155,10 @@ jobs:
     - you should see build and deploy running and after sometime it should be succesfull
 
 ### workflow succesfull 
-    ![alt text](image.png)
+    
 
 ### website login
-![alt text](image-1.png)
+    
 
 
 
