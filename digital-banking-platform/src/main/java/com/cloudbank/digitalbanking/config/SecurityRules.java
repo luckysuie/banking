@@ -6,6 +6,13 @@ import org.springframework.security.config.annotation.web.configurers.AuthorizeH
 
 /**
  * Shared authorization rules for HTTP Basic auth (all profiles).
+ *
+ * <p>The backend REST API is namespaced under {@code /api/**}; everything else
+ * (the React single-page application shell, its static assets, and client-side
+ * routes such as {@code /login} or {@code /dashboard}) is permitted here and
+ * served by {@link SpaWebConfig}. The SPA itself enforces its own client-side
+ * route guarding, so gating page navigation at the security filter chain is
+ * unnecessary — only the underlying {@code /api/**} calls need to be secured.
  */
 public final class SecurityRules {
 
@@ -24,9 +31,11 @@ public final class SecurityRules {
                         "/swagger-ui/**",
                         "/v3/api-docs/**")
                 .permitAll()
-                .requestMatchers("/audit-events/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/customers").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PATCH, "/accounts/*/status").hasRole("ADMIN")
-                .anyRequest().authenticated();
+                .requestMatchers("/", "/index.html", "/assets/**").permitAll()
+                .requestMatchers("/api/audit-events/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/customers").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH, "/api/accounts/*/status").hasRole("ADMIN")
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().permitAll();
     }
 }

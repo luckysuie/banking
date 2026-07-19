@@ -252,9 +252,118 @@
 
             </plugin>
 
+            <plugin>
+
+                <groupId>org.apache.maven.plugins</groupId>
+
+                <artifactId>maven-clean-plugin</artifactId>
+
+                <configuration>
+
+                    <filesets>
+
+                        <fileset>
+
+                            <directory>${project.basedir}/src/main/resources/static</directory>
+
+                            <includes>
+
+                                <include>**/*</include>
+
+                            </includes>
+
+                        </fileset>
+
+                    </filesets>
+
+                </configuration>
+
+            </plugin>
+
         </plugins>
 
     </build>
+
+
+
+    <!--
+        Activated automatically when the React frontend (digital-banking-web) has
+        already been built (npm run build). Copies the compiled dist/ output into
+        src/main/resources/static so the Spring Boot JAR serves the SPA alongside
+        the REST API. Backend-only builds (frontend not built yet) are unaffected.
+    -->
+
+    <profiles>
+
+        <profile>
+
+            <id>copy-frontend</id>
+
+            <activation>
+
+                <file>
+
+                    <exists>${project.basedir}/../digital-banking-web/dist/index.html</exists>
+
+                </file>
+
+            </activation>
+
+            <build>
+
+                <plugins>
+
+                    <plugin>
+
+                        <groupId>org.apache.maven.plugins</groupId>
+
+                        <artifactId>maven-resources-plugin</artifactId>
+
+                        <executions>
+
+                            <execution>
+
+                                <id>copy-frontend-dist</id>
+
+                                <phase>generate-resources</phase>
+
+                                <goals>
+
+                                    <goal>copy-resources</goal>
+
+                                </goals>
+
+                                <configuration>
+
+                                    <outputDirectory>${project.basedir}/src/main/resources/static</outputDirectory>
+
+                                    <resources>
+
+                                        <resource>
+
+                                            <directory>${project.basedir}/../digital-banking-web/dist</directory>
+
+                                            <filtering>false</filtering>
+
+                                        </resource>
+
+                                    </resources>
+
+                                </configuration>
+
+                            </execution>
+
+                        </executions>
+
+                    </plugin>
+
+                </plugins>
+
+            </build>
+
+        </profile>
+
+    </profiles>
 
 </project>
 

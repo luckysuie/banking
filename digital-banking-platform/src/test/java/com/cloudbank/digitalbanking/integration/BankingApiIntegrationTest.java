@@ -35,7 +35,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             Map<String, Object> payload = buildCustomerPayload("create");
 
             // Act & Assert
-            mockMvc.perform(post("/customers")
+            mockMvc.perform(post("/api/customers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(payload)))
                     .andExpect(status().isCreated())
@@ -59,7 +59,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             createCustomer("duplicate");
 
             // Act & Assert
-            mockMvc.perform(post("/customers")
+            mockMvc.perform(post("/api/customers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(payload)))
                     .andExpect(status().isConflict())
@@ -85,7 +85,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             payload.put("accountType", "CHEQUING");
 
             // Act & Assert
-            mockMvc.perform(post("/accounts")
+            mockMvc.perform(post("/api/accounts")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(payload)))
                     .andExpect(status().isCreated())
@@ -108,7 +108,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             createAccount(customerId, "SAVINGS");
 
             // Act & Assert
-            mockMvc.perform(get("/accounts/customer/{customerId}", customerId))
+            mockMvc.perform(get("/api/accounts/customer/{customerId}", customerId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.length()").value(2))
@@ -137,7 +137,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             payload.put("nickname", "Jordan");
 
             // Act & Assert
-            mockMvc.perform(post("/beneficiaries")
+            mockMvc.perform(post("/api/beneficiaries")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(payload)))
                     .andExpect(status().isCreated())
@@ -170,7 +170,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             transfer.put("idempotencyKey", "idem-success-001");
 
             // Act & Assert
-            mockMvc.perform(post("/payments/transfers")
+            mockMvc.perform(post("/api/payments/transfers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(transfer)))
                     .andExpect(status().isCreated())
@@ -200,7 +200,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
                     sourceAccountId, beneficiaryId, "200.00", "idem-insufficient-001");
 
             // Act & Assert
-            mockMvc.perform(post("/payments/transfers")
+            mockMvc.perform(post("/api/payments/transfers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(transfer)))
                     .andExpect(status().isBadRequest())
@@ -225,7 +225,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
                     sourceAccountId, beneficiaryId, "150.00", "idem-limit-001");
 
             // Act & Assert
-            mockMvc.perform(post("/payments/transfers")
+            mockMvc.perform(post("/api/payments/transfers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(transfer)))
                     .andExpect(status().isBadRequest())
@@ -248,7 +248,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             Map<String, Object> transfer = buildTransferRequest(
                     sourceAccountId, beneficiaryId, "75.00", "idem-repeat-001");
 
-            String firstResponse = mockMvc.perform(post("/payments/transfers")
+            String firstResponse = mockMvc.perform(post("/api/payments/transfers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(transfer)))
                     .andExpect(status().isCreated())
@@ -259,7 +259,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             String firstPaymentId = objectMapper.readTree(firstResponse).path("data").path("id").asText();
 
             // Act & Assert
-            mockMvc.perform(post("/payments/transfers")
+            mockMvc.perform(post("/api/payments/transfers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(transfer)))
                     .andExpect(status().isCreated())
@@ -282,7 +282,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
 
             Map<String, Object> originalTransfer = buildTransferRequest(
                     sourceAccountId, beneficiaryId, "60.00", "idem-conflict-001");
-            mockMvc.perform(post("/payments/transfers")
+            mockMvc.perform(post("/api/payments/transfers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(originalTransfer)))
                     .andExpect(status().isCreated());
@@ -291,7 +291,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
                     sourceAccountId, beneficiaryId, "90.00", "idem-conflict-001");
 
             // Act & Assert
-            mockMvc.perform(post("/payments/transfers")
+            mockMvc.perform(post("/api/payments/transfers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(conflictingTransfer)))
                     .andExpect(status().isConflict())
@@ -333,13 +333,13 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             transfer.put("amount", "45.00");
             transfer.put("idempotencyKey", "idem-txn-001");
 
-            mockMvc.perform(post("/payments/transfers")
+            mockMvc.perform(post("/api/payments/transfers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(transfer)))
                     .andExpect(status().isCreated());
 
             // Act & Assert
-            mockMvc.perform(get("/transactions/account/{accountId}", sourceAccountId))
+            mockMvc.perform(get("/api/transactions/account/{accountId}", sourceAccountId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.content.length()").value(1))
                     .andExpect(jsonPath("$.data.content[0].transactionType").value("DEBIT"))
@@ -372,13 +372,13 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             payload.put("accountType", "SAVINGS");
 
             // Act
-            mockMvc.perform(post("/accounts")
+            mockMvc.perform(post("/api/accounts")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(payload)))
                     .andExpect(status().isCreated());
 
             // Assert
-            mockMvc.perform(get("/notifications/customer/{customerId}", customerId))
+            mockMvc.perform(get("/api/notifications/customer/{customerId}", customerId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data[0].type").value("ACCOUNT_CREATED"))
                     .andExpect(jsonPath("$.data[0].status").value("SENT"))
@@ -405,7 +405,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             Map<String, Object> payload = buildCustomerPayload("audit");
 
             // Act
-            String response = mockMvc.perform(post("/customers")
+            String response = mockMvc.perform(post("/api/customers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(payload)))
                     .andExpect(status().isCreated())
@@ -416,7 +416,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             String customerId = objectMapper.readTree(response).path("data").path("id").asText();
 
             // Assert
-            mockMvc.perform(get("/audit-events")
+            mockMvc.perform(get("/api/audit-events")
                             .param("action", "CUSTOMER_CREATED")
                             .param("actorId", customerId))
                     .andExpect(status().isOk())
@@ -453,7 +453,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
             invalidPayload.put("postalCode", "INVALID");
 
             // Act & Assert
-            mockMvc.perform(post("/customers")
+            mockMvc.perform(post("/api/customers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(invalidPayload)))
                     .andExpect(status().isBadRequest())
@@ -467,7 +467,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
         @Test
         void protectedEndpoint_withoutAuthentication_shouldReturnUnauthorized() throws Exception {
             // Act & Assert
-            mockMvc.perform(get("/customers"))
+            mockMvc.perform(get("/api/customers"))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
                     .andExpect(jsonPath("$.correlationId").exists());
@@ -477,7 +477,7 @@ class BankingApiIntegrationTest extends IntegrationTestSupport {
         @WithMockUser(roles = "CUSTOMER")
         void auditEndpoint_withCustomerRole_shouldReturnForbidden() throws Exception {
             // Act & Assert
-            mockMvc.perform(get("/audit-events"))
+            mockMvc.perform(get("/api/audit-events"))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
         }

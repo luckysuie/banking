@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/beneficiaries")
+@RequestMapping("/api/beneficiaries")
 @RequiredArgsConstructor
 @Tag(name = "Beneficiary Management", description = "APIs for managing customer payment beneficiaries")
 public class BeneficiaryController {

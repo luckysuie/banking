@@ -40,8 +40,17 @@ The API must be running first (`mvn spring-boot:run` in `digital-banking-platfor
 
 - **Vite** proxies `/api` → `http://localhost:8080` (no CORS issues in dev)
 - **HTTP Basic auth** stored in `sessionStorage` for API calls
+- API base URL is `VITE_API_BASE_URL` (defaults to `/api`, same-origin — see `src/config/env.ts`)
 - Pages: Dashboard, Accounts, Transfer, Payees, Transaction history, Notifications
 
 ## Remote access (Azure VM)
 
 If browsing from your laptop, open NSG port **5173** and use `http://<vm-public-ip>:5173`.
+
+## Production build (embedded in the Spring Boot JAR)
+
+This app is not deployed standalone. `npm run build` produces `dist/`, which is copied
+into `../digital-banking-platform/src/main/resources/static` and packaged inside the
+Spring Boot JAR, so the React app and the REST API are served from the same Azure App
+Service and origin. See `../digital-banking-platform/README.md` for the full build and
+deployment flow.

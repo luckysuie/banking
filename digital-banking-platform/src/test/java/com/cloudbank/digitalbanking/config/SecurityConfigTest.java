@@ -22,7 +22,7 @@ class SecurityConfigTest {
 
     @Test
     void protectedEndpoint_withoutAuth_shouldReturn401Json() throws Exception {
-        mockMvc.perform(get("/customers"))
+        mockMvc.perform(get("/api/customers"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.correlationId").exists());
@@ -31,7 +31,7 @@ class SecurityConfigTest {
     @Test
     @WithMockUser(roles = "CUSTOMER")
     void auditEndpoint_withCustomerRole_shouldReturn403Json() throws Exception {
-        mockMvc.perform(get("/audit-events"))
+        mockMvc.perform(get("/api/audit-events"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
     }
@@ -39,7 +39,7 @@ class SecurityConfigTest {
     @Test
     @WithMockUser(roles = "CUSTOMER")
     void accountStatusUpdate_withCustomerRole_shouldReturn403() throws Exception {
-        mockMvc.perform(patch("/accounts/00000000-0000-0000-0000-000000000001/status")
+        mockMvc.perform(patch("/api/accounts/00000000-0000-0000-0000-000000000001/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"accountStatus\":\"FROZEN\"}"))
                 .andExpect(status().isForbidden())
@@ -49,7 +49,7 @@ class SecurityConfigTest {
     @Test
     @WithMockUser(roles = "CUSTOMER")
     void listCustomers_withCustomerRole_shouldReturnForbidden() throws Exception {
-        mockMvc.perform(get("/customers"))
+        mockMvc.perform(get("/api/customers"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
     }
@@ -57,7 +57,7 @@ class SecurityConfigTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void listCustomers_withAdminRole_shouldBeAllowed() throws Exception {
-        mockMvc.perform(get("/customers"))
+        mockMvc.perform(get("/api/customers"))
                 .andExpect(status().isOk());
     }
 

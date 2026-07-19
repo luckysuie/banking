@@ -66,9 +66,11 @@ app:
 
 springdoc:
   swagger-ui:
-    enabled: false
+    enabled: true
+    path: /swagger-ui.html
   api-docs:
-    enabled: false
+    enabled: true
+    path: /v3/api-docs
 
 management:
   endpoints:

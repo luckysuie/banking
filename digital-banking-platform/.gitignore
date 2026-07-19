@@ -3,6 +3,10 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+### Frontend build output (copied in during CI/Maven build, not committed) ###
+src/main/resources/static/*
+!src/main/resources/static/.gitkeep
+
 ### STS ###
 .apt_generated
 .classpath

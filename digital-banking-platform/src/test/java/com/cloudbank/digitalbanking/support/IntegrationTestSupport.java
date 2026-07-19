@@ -66,7 +66,7 @@ public abstract class IntegrationTestSupport {
 
     @WithMockUser(roles = "CUSTOMER")
     protected ResultActions createCustomer(String emailSuffix) throws Exception {
-        return mockMvc.perform(post("/customers")
+        return mockMvc.perform(post("/api/customers")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(buildCustomerPayload(emailSuffix))));
     }
@@ -86,7 +86,7 @@ public abstract class IntegrationTestSupport {
         payload.put("customerId", customerId.toString());
         payload.put("accountType", accountType);
 
-        String response = mockMvc.perform(post("/accounts")
+        String response = mockMvc.perform(post("/api/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
                 .andReturn()
@@ -104,7 +104,7 @@ public abstract class IntegrationTestSupport {
         payload.put("accountType", accountType);
         payload.put("dailyTransferLimit", dailyLimit);
 
-        String response = mockMvc.perform(post("/accounts")
+        String response = mockMvc.perform(post("/api/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
                 .andReturn()
@@ -132,7 +132,7 @@ public abstract class IntegrationTestSupport {
         payload.put("institutionNumber", "001");
         payload.put("nickname", nickname);
 
-        String response = mockMvc.perform(post("/beneficiaries")
+        String response = mockMvc.perform(post("/api/beneficiaries")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
                 .andReturn()

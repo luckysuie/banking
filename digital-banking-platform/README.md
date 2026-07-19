@@ -109,12 +109,14 @@ flowchart TB
         SW[Swagger UI]
         API[REST Clients]
         H2C[H2 Console]
+        BROWSER[Browser<br/>/, /login, /dashboard...]
     end
 
-    subgraph "Spring Boot Application (port 8080, context /api)"
+    subgraph "Spring Boot Application (port 8080)"
+        SPA[React SPA static assets<br/>served from classpath:/static]
         SEC[Security Filter Chain<br/>HTTP Basic + RBAC]
         CORR[Audit Correlation Filter<br/>X-Correlation-Id]
-        CTRL[REST Controllers]
+        CTRL["REST Controllers (/api/**)"]
         SVC[Domain Services]
         MAP[Mappers / DTOs]
         EXC[Global Exception Handler]
@@ -134,6 +136,7 @@ flowchart TB
     SW --> SEC
     API --> SEC
     H2C --> H2
+    BROWSER --> SPA
     SEC --> CORR --> CTRL --> SVC --> MAP
     SVC --> REPO --> H2
     SVC --> NOTIF
@@ -347,7 +350,7 @@ On first startup, the demo data initializer seeds three fictional Canadian custo
 
 ## Customer Portal (React UI)
 
-A customer-facing web app lives in the sibling folder `digital-banking-web`. Start the API first, then:
+A customer-facing web app lives in the sibling folder `digital-banking-web`. For day-to-day frontend development, start the API first, then run the Vite dev server (proxies `/api` to `http://localhost:8080`):
 
 ```powershell
 $env:Path = "C:\tools\nodejs;" + $env:Path
@@ -358,10 +361,42 @@ npm run dev
 
 | Resource | URL |
 |----------|-----|
-| Customer portal | http://localhost:5173 |
+| Customer portal (dev) | http://localhost:5173 |
 | Demo login | `customer` / `changeme-customer` |
 
 See `digital-banking-web/README.md` for full UI documentation.
+
+### Single full-stack JAR (production build)
+
+For deployment, the React app is built and embedded into this Spring Boot module so **one JAR serves both the UI and the API** on a single port/App Service:
+
+```powershell
+cd digital-banking-web
+npm install
+npm run build
+# dist/ is produced
+
+cd ..\digital-banking-platform
+mvn clean package
+# the "copy-frontend" Maven profile auto-activates because
+# digital-banking-web/dist/index.html now exists, and copies dist/
+# into src/main/resources/static before the JAR is built
+```
+
+Then run the JAR and open a single origin for everything:
+
+```bash
+java -jar target/digital-banking-platform-0.0.1-SNAPSHOT.jar
+```
+
+| Resource | URL |
+|----------|-----|
+| React application | http://localhost:8080/ |
+| REST APIs | http://localhost:8080/api/** |
+| Health | http://localhost:8080/actuator/health |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html |
+
+The GitHub Actions workflow (`.github/workflows/main_banking-webapp.yml`) performs these same steps automatically on every push to `main`.
 
 ---
 
@@ -383,8 +418,8 @@ The test suite includes:
 
 | Resource | URL |
 |----------|-----|
-| Swagger UI | http://localhost:8080/api/swagger-ui.html |
-| OpenAPI JSON | http://localhost:8080/api/v3/api-docs |
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+| OpenAPI JSON | http://localhost:8080/v3/api-docs |
 
 Click **Authorize** in Swagger and enter HTTP Basic credentials.
 
@@ -394,7 +429,7 @@ Click **Authorize** in Swagger and enter HTTP Basic credentials.
 
 | Setting | Value |
 |---------|-------|
-| URL | http://localhost:8080/api/h2-console |
+| URL | http://localhost:8080/h2-console |
 | JDBC URL | `jdbc:h2:mem:digitalbanking` |
 | Username | `sa` |
 | Password | *(leave empty)* |
@@ -513,14 +548,15 @@ This is a **development demonstration** and has intentional gaps:
 
 ## Microsoft Azure Deployment
 
-Production uses the **`azure`** Spring profile. SQL and Key Vault are configured in application code (`application-azure.yml`) — create the Azure resources in the Portal (or CLI), then wire App Service settings.
+Production uses the **`azure`** Spring profile. SQL and Key Vault are configured in application code (`application-azure.yml`) — create the Azure resources in the Portal (or CLI), then wire App Service settings. A single **App Service** hosts the executable JAR, which contains both the compiled React frontend (`static/`) and the REST API.
 
 | Component | Azure Service | App integration |
 |-----------|---------------|-----------------|
-| Hosting | App Service (Java 21) | `SPRING_PROFILES_ACTIVE=azure` |
+| Hosting | One App Service (Java 21) serving UI + API | `SPRING_PROFILES_ACTIVE=azure` |
 | Database | Azure SQL Database | JDBC URL + credentials from Key Vault + Flyway |
 | Secrets | Key Vault | Managed identity loads `sql-jdbc-url`, `sql-admin-username`, `sql-admin-password` |
 | Auth | HTTP Basic | Same as local (`APP_SECURITY_*` env vars) |
+| CI/CD | GitHub Actions + OIDC (`azure/login`) | Builds frontend + backend, deploys JAR via `azure/webapps-deploy` |
 
 ### How credentials work
 

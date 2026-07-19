@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/payments")
+@RequestMapping("/api/payments")
 @RequiredArgsConstructor
 @Tag(name = "Payment & Fund Transfer", description = "APIs for processing fund transfers and viewing payment history")
 public class PaymentController {

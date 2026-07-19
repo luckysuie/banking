@@ -18,16 +18,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: digital-banking-web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd digital-banking-web
+          npm install
+
+      - name: Build React frontend
+        run: |
+          cd digital-banking-web
+          npm run build
+
+      - name: Copy frontend build into Spring Boot static resources
+        run: |
+          rm -rf digital-banking-platform/src/main/resources/static
+          mkdir -p digital-banking-platform/src/main/resources/static
+          cp -r digital-banking-web/dist/. digital-banking-platform/src/main/resources/static/
+
       - name: Set up Java version
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'microsoft'
 
-      - name: Build with Maven
+      - name: Run backend tests
         run: |
           cd digital-banking-platform
-          mvn clean install
+          mvn -B test
+
+      - name: Package Spring Boot JAR (with bundled frontend)
+        run: |
+          cd digital-banking-platform
+          mvn -B clean package -DskipTests
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -62,4 +90,3 @@ jobs:
           app-name: 'banking-webapp'
           slot-name: 'Production'
           package: '*.jar'
-          
