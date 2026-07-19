@@ -25,15 +25,13 @@ jobs:
           distribution: 'microsoft'
 
       - name: Build with Maven
-        run: |
-          cd digital-banking-platform
-          mvn clean install
+        run: mvn clean install
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: digital-banking-platform/target/*.jar
+          path: '${{ github.workspace }}/target/*.jar'
 
   deploy:
     runs-on: ubuntu-latest
@@ -51,9 +49,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_BFFC7FBF6869461A9729AA3E024FEC3C }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_264EA6B1C3814B429557B483ECE650D4 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9F4BA62EDC9D474D8407128EFBCB6A29 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_CADCB0ECAAED406A9836D19D64608DBD }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_9BEA09E487D9492F9CA558361F2AB54A }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B019AE7EE46D42B79E8DF781E7238AA3 }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
