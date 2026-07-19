@@ -154,12 +154,17 @@ jobs:
     - Click on the current running workflow
     - you should see build and deploy running and after sometime it should be succesfull
 
-### workflow succesfull 
-    ![GitHub Actions](images/workflow-actions.png)
-### website login
-    ![Website](images/webapp.png)
-### Azure sql database
-    ![Database](images/Queryeditor.png)
+### Workflow Successful
+
+![GitHub Actions](images/workflow-actions.png)
+
+### Website Login
+
+![Website](images/webapp.png)
+
+### Azure SQL Database
+
+![Database](images/Queryeditor.png)
     
 4. Run SQL queries to verify the database and tables
  - navigate to your Azure Sql database
