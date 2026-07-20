@@ -19,49 +19,42 @@ steps:
 - checkout: self
   clean: true
 
-# Configure Node.js inside the pipeline
 - task: NodeTool@0
   displayName: Use Node.js 20
   inputs:
     versionSpec: '20.x'
 
-# Verify installed tools
 - script: |
     java --version
     mvn --version
     node --version
     npm --version
-    git --version
-  displayName: Verify Required Tools
+  displayName: Verify Tools
 
-# Build React frontend
 - script: |
     npm ci
     npm run build
+    ls -la dist
   workingDirectory: '$(System.DefaultWorkingDirectory)/$(frontendPath)'
   displayName: Build React Frontend
 
-# Copy React build into Spring Boot
 - script: |
     rm -rf "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
     mkdir -p "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
 
     cp -r "$(System.DefaultWorkingDirectory)/$(frontendPath)/dist/." \
-    "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static/"
+      "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static/"
+
+    ls -la "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
   displayName: Copy Frontend into Spring Boot
 
-# Build Spring Boot JAR
 - script: |
     mvn clean package
+
+    unzip -l target/*.jar | grep "BOOT-INF/classes/static" || true
   workingDirectory: '$(System.DefaultWorkingDirectory)/$(backendPath)'
   displayName: Build Spring Boot Application
 
-# Verify generated JAR
-- script: |
-    ls -lh "$(System.DefaultWorkingDirectory)/$(backendPath)/target/"
-  displayName: Verify Generated JAR
-
-# Deploy to Azure App Service
 - task: AzureWebApp@1
   displayName: Deploy to Azure App Service
   inputs:
