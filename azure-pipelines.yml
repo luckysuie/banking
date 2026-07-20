@@ -9,51 +9,86 @@ pool:
     - Agent.Name -equals agent
 
 variables:
-  frontendPath: digital-banking-web
-  backendPath: digital-banking-platform
-  azureServiceConnection: banking-service-connec
-  webAppName: bankingwebapp
+  frontendPath: 'digital-banking-web'
+  backendPath: 'digital-banking-platform'
+  azureServiceConnection: 'banking-service-connec'
+  webAppName: 'bankingwebapp'
 
 steps:
-
 - checkout: self
   clean: true
 
 - task: NodeTool@0
-  displayName: Use Node.js 20
+  displayName: Install Node.js 20
   inputs:
     versionSpec: '20.x'
 
 - script: |
-    java --version
-    mvn --version
-    node --version
-    npm --version
-  displayName: Verify Tools
-
-- script: |
+    set -e
     npm ci
     npm run build
-    ls -la dist
+
+    echo "===== Frontend files ====="
+    find dist -maxdepth 3 -type f -print
+
+    test -f dist/index.html
   workingDirectory: '$(System.DefaultWorkingDirectory)/$(frontendPath)'
-  displayName: Build React Frontend
+  displayName: Build React frontend
 
 - script: |
-    rm -rf "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
-    mkdir -p "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
+    set -e
 
-    cp -r "$(System.DefaultWorkingDirectory)/$(frontendPath)/dist/." \
-      "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static/"
+    DIST_DIR="$(System.DefaultWorkingDirectory)/$(frontendPath)/dist"
+    STATIC_DIR="$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
 
-    ls -la "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
-  displayName: Copy Frontend into Spring Boot
+    rm -rf "$STATIC_DIR"
+    mkdir -p "$STATIC_DIR"
+
+    cp -r "$DIST_DIR/." "$STATIC_DIR/"
+
+    echo "===== Static resources copied ====="
+    find "$STATIC_DIR" -maxdepth 3 -type f -print
+
+    test -f "$STATIC_DIR/index.html"
+  displayName: Copy frontend into backend
+
+- task: JavaToolInstaller@0
+  displayName: Install Java 21
+  inputs:
+    versionSpec: '21'
+    jdkArchitectureOption: 'x64'
+    jdkSourceOption: 'PreInstalled'
 
 - script: |
-    mvn clean package
-
-    unzip -l target/*.jar | grep "BOOT-INF/classes/static" || true
+    set -e
+    mvn -B clean package -DskipTests
   workingDirectory: '$(System.DefaultWorkingDirectory)/$(backendPath)'
-  displayName: Build Spring Boot Application
+  displayName: Build Spring Boot JAR
+
+- script: |
+    set -e
+
+    cd "$(System.DefaultWorkingDirectory)/$(backendPath)"
+
+    JAR_FILE=$(find target -maxdepth 1 \
+      -type f \
+      -name "*.jar" \
+      ! -name "*.original" \
+      | head -n 1)
+
+    echo "Selected JAR: $JAR_FILE"
+
+    if [ -z "$JAR_FILE" ]; then
+      echo "JAR file not found"
+      exit 1
+    fi
+
+    echo "===== Verify frontend inside JAR ====="
+    unzip -l "$JAR_FILE" | grep "BOOT-INF/classes/static/index.html"
+
+    mkdir -p "$(Build.ArtifactStagingDirectory)"
+    cp "$JAR_FILE" "$(Build.ArtifactStagingDirectory)/banking-app.jar"
+  displayName: Verify and prepare JAR
 
 - task: AzureWebApp@1
   displayName: Deploy to Azure App Service
@@ -61,5 +96,4 @@ steps:
     azureSubscription: '$(azureServiceConnection)'
     appType: 'webAppLinux'
     appName: '$(webAppName)'
-    package: '$(System.DefaultWorkingDirectory)/$(backendPath)/target/*.jar'
-    runtimeStack: 'JAVA|21-java21'
+    package: '$(Build.ArtifactStagingDirectory)/banking-app.jar'
