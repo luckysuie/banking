@@ -16,66 +16,16 @@ variables:
 
 steps:
 
-# 1. Checkout repository
 - checkout: self
   clean: true
   displayName: Checkout source code
 
-# 2. Install/use Node.js
 - task: NodeTool@0
   displayName: Use Node.js 20
   inputs:
     versionSpec: '20.x'
 
-# 3. Build React frontend
-- script: |
-    set -e
-
-    echo "Node version:"
-    node --version
-
-    echo "NPM version:"
-    npm --version
-
-    npm ci
-    npm run build
-
-    echo "===== React build files ====="
-    find dist -maxdepth 3 -type f -print
-
-    if [ ! -f dist/index.html ]; then
-      echo "ERROR: dist/index.html was not generated"
-      exit 1
-    fi
-  workingDirectory: '$(System.DefaultWorkingDirectory)/$(frontendPath)'
-  displayName: Build React frontend
-
-# 4. Copy React build into Spring Boot static resources
-- script: |
-    set -e
-
-    DIST_DIR="$(System.DefaultWorkingDirectory)/$(frontendPath)/dist"
-    STATIC_DIR="$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
-
-    echo "Removing old static resources..."
-    rm -rf "$STATIC_DIR"
-
-    echo "Creating static resources folder..."
-    mkdir -p "$STATIC_DIR"
-
-    echo "Copying React build..."
-    cp -r "$DIST_DIR/." "$STATIC_DIR/"
-
-    echo "===== Spring Boot static files ====="
-    find "$STATIC_DIR" -maxdepth 3 -type f -print
-
-    if [ ! -f "$STATIC_DIR/index.html" ]; then
-      echo "ERROR: index.html was not copied into Spring Boot"
-      exit 1
-    fi
-  displayName: Copy frontend into Spring Boot
-
-# 5. Build Spring Boot using Java already installed on the agent
+# Clean backend first because pom.xml deletes the static directory
 - script: |
     set -e
 
@@ -83,27 +33,61 @@ steps:
     export JAVA_HOME="$(dirname "$(dirname "$JAVA_PATH")")"
     export PATH="$JAVA_HOME/bin:$PATH"
 
-    echo "JAVA_HOME=$JAVA_HOME"
-
-    echo "===== Java version ====="
     java -version
-
-    echo "===== Maven version ====="
     mvn -version
 
-    echo "===== Building Spring Boot application ====="
-    mvn -B clean package -DskipTests
+    mvn -B clean
   workingDirectory: '$(System.DefaultWorkingDirectory)/$(backendPath)'
-  displayName: Build Spring Boot JAR
+  displayName: Clean Spring Boot project
 
-# 6. Verify frontend exists inside the JAR
 - script: |
     set -e
 
-    BACKEND_DIR="$(System.DefaultWorkingDirectory)/$(backendPath)"
-    STAGING_DIR="$(Build.ArtifactStagingDirectory)"
+    npm ci
+    npm run build
 
-    cd "$BACKEND_DIR"
+    echo "===== React build files ====="
+    find dist -maxdepth 3 -type f -print
+
+    test -f dist/index.html
+  workingDirectory: '$(System.DefaultWorkingDirectory)/$(frontendPath)'
+  displayName: Build React frontend
+
+- script: |
+    set -e
+
+    DIST_DIR="$(System.DefaultWorkingDirectory)/$(frontendPath)/dist"
+    STATIC_DIR="$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
+
+    mkdir -p "$STATIC_DIR"
+    cp -r "$DIST_DIR/." "$STATIC_DIR/"
+
+    echo "===== Spring Boot static files ====="
+    find "$STATIC_DIR" -maxdepth 3 -type f -print
+
+    test -f "$STATIC_DIR/index.html"
+  displayName: Copy frontend into Spring Boot
+
+# Do not use clean here
+- script: |
+    set -e
+
+    JAVA_PATH="$(readlink -f "$(command -v java)")"
+    export JAVA_HOME="$(dirname "$(dirname "$JAVA_PATH")")"
+    export PATH="$JAVA_HOME/bin:$PATH"
+
+    mvn -B package -DskipTests
+  workingDirectory: '$(System.DefaultWorkingDirectory)/$(backendPath)'
+  displayName: Package Spring Boot JAR
+
+- script: |
+    set -e
+
+    JAVA_PATH="$(readlink -f "$(command -v java)")"
+    export JAVA_HOME="$(dirname "$(dirname "$JAVA_PATH")")"
+    export PATH="$JAVA_HOME/bin:$PATH"
+
+    cd "$(System.DefaultWorkingDirectory)/$(backendPath)"
 
     JAR_FILE=$(find target -maxdepth 1 \
       -type f \
@@ -114,26 +98,24 @@ steps:
       -print -quit)
 
     if [ -z "$JAR_FILE" ]; then
-      echo "ERROR: Deployable JAR was not found"
+      echo "ERROR: Deployable JAR not found"
       exit 1
     fi
 
     echo "Selected JAR: $JAR_FILE"
 
-    echo "===== Checking index.html inside JAR ====="
-    unzip -l "$JAR_FILE" | grep "BOOT-INF/classes/static/index.html"
+    echo "===== Verify index.html inside JAR ====="
+    jar tf "$JAR_FILE" | grep "BOOT-INF/classes/static/index.html"
 
-    echo "===== Checking frontend assets inside JAR ====="
-    unzip -l "$JAR_FILE" | grep "BOOT-INF/classes/static/assets/" | head -20
+    echo "===== Verify frontend assets inside JAR ====="
+    jar tf "$JAR_FILE" | grep "BOOT-INF/classes/static/assets/"
 
-    mkdir -p "$STAGING_DIR"
-    cp "$JAR_FILE" "$STAGING_DIR/banking-app.jar"
+    mkdir -p "$(Build.ArtifactStagingDirectory)"
+    cp "$JAR_FILE" "$(Build.ArtifactStagingDirectory)/banking-app.jar"
 
-    echo "===== Deployment package ====="
-    ls -lh "$STAGING_DIR/banking-app.jar"
+    ls -lh "$(Build.ArtifactStagingDirectory)/banking-app.jar"
   displayName: Verify and prepare deployment JAR
 
-# 7. Deploy JAR to Azure App Service
 - task: AzureWebApp@1
   displayName: Deploy to Azure App Service
   inputs:
