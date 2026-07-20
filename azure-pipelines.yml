@@ -1,0 +1,69 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  name: Banking-Agent-Pool
+  demands:
+    - Agent.Name -equals banking-linux-agent
+
+variables:
+  frontendPath: digital-banking-web
+  backendPath: digital-banking-platform
+
+  azureServiceConnection: banking-service-connec
+  webAppName: bankingwebapp
+
+steps:
+
+# Checkout source code
+- checkout: self
+  clean: true
+
+# Verify installed tools
+- script: |
+    java -version
+    mvn -version
+    node -v
+    npm -v
+    git --version
+    az --version
+  displayName: Verify Build Tools
+
+# Install frontend dependencies
+- script: |
+    npm ci
+  workingDirectory: $(frontendPath)
+  displayName: Install Frontend Dependencies
+
+# Build React application
+- script: |
+    npm run build
+  workingDirectory: $(frontendPath)
+  displayName: Build React Application
+
+# Copy React build into Spring Boot static folder
+- script: |
+    rm -rf $(backendPath)/src/main/resources/static
+    mkdir -p $(backendPath)/src/main/resources/static
+    cp -r $(frontendPath)/dist/. $(backendPath)/src/main/resources/static/
+  displayName: Copy React Build
+
+# Build Spring Boot application
+- task: Maven@4
+  displayName: Build Spring Boot
+  inputs:
+    mavenPomFile: '$(backendPath)/pom.xml'
+    goals: 'clean package'
+    publishJUnitResults: false
+
+# Deploy to Azure App Service
+- task: AzureWebApp@1
+  displayName: Deploy to Azure Web App
+  inputs:
+    azureSubscription: '$(azureServiceConnection)'
+    appType: 'webAppLinux'
+    appName: '$(webAppName)'
+    package: '$(backendPath)/target/*.jar'
+    runtimeStack: 'JAVA|21-java21'
