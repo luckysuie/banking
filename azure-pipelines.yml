@@ -28,7 +28,7 @@ steps:
     npm ci
     npm run build
 
-    echo "===== Frontend files ====="
+    echo "===== Frontend build output ====="
     find dist -maxdepth 3 -type f -print
 
     test -f dist/index.html
@@ -38,32 +38,28 @@ steps:
 - script: |
     set -e
 
-    DIST_DIR="$(System.DefaultWorkingDirectory)/$(frontendPath)/dist"
     STATIC_DIR="$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
+    DIST_DIR="$(System.DefaultWorkingDirectory)/$(frontendPath)/dist"
 
     rm -rf "$STATIC_DIR"
     mkdir -p "$STATIC_DIR"
+    cp -rv "$DIST_DIR/." "$STATIC_DIR/"
 
-    cp -r "$DIST_DIR/." "$STATIC_DIR/"
-
-    echo "===== Static resources copied ====="
+    echo "===== Files copied into Spring Boot ====="
     find "$STATIC_DIR" -maxdepth 3 -type f -print
 
     test -f "$STATIC_DIR/index.html"
-  displayName: Copy frontend into backend
+  displayName: Copy React build into Spring Boot
 
-- task: JavaToolInstaller@0
-  displayName: Install Java 21
-  inputs:
-    versionSpec: '21'
-    jdkArchitectureOption: 'x64'
-    jdkSourceOption: 'PreInstalled'
-
-- script: |
-    set -e
-    mvn -B clean package -DskipTests
-  workingDirectory: '$(System.DefaultWorkingDirectory)/$(backendPath)'
+- task: Maven@4
   displayName: Build Spring Boot JAR
+  inputs:
+    mavenPomFile: '$(backendPath)/pom.xml'
+    goals: 'clean package'
+    options: '-DskipTests'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.21'
+    publishJUnitResults: false
 
 - script: |
     set -e
@@ -73,22 +69,23 @@ steps:
     JAR_FILE=$(find target -maxdepth 1 \
       -type f \
       -name "*.jar" \
-      ! -name "*.original" \
+      ! -name "*.jar.original" \
       | head -n 1)
 
-    echo "Selected JAR: $JAR_FILE"
-
     if [ -z "$JAR_FILE" ]; then
-      echo "JAR file not found"
+      echo "No deployable JAR found"
       exit 1
     fi
 
+    echo "JAR selected: $JAR_FILE"
+
     echo "===== Verify frontend inside JAR ====="
     unzip -l "$JAR_FILE" | grep "BOOT-INF/classes/static/index.html"
+    unzip -l "$JAR_FILE" | grep "BOOT-INF/classes/static/assets/"
 
     mkdir -p "$(Build.ArtifactStagingDirectory)"
     cp "$JAR_FILE" "$(Build.ArtifactStagingDirectory)/banking-app.jar"
-  displayName: Verify and prepare JAR
+  displayName: Verify and stage JAR
 
 - task: AzureWebApp@1
   displayName: Deploy to Azure App Service
@@ -97,3 +94,4 @@ steps:
     appType: 'webAppLinux'
     appName: '$(webAppName)'
     package: '$(Build.ArtifactStagingDirectory)/banking-app.jar'
+    deploymentMethod: 'auto'
