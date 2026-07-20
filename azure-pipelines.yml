@@ -9,118 +9,62 @@ pool:
     - Agent.Name -equals agent
 
 variables:
-  frontendPath: 'digital-banking-web'
-  backendPath: 'digital-banking-platform'
-  azureServiceConnection: 'banking-service-connec'
-  webAppName: 'bankingwebapp'
+  frontendPath: digital-banking-web
+  backendPath: digital-banking-platform
+  serviceConnection: banking-service-connec
+  webAppName: bankingwebapp
 
 steps:
-
 - checkout: self
   clean: true
-  displayName: Checkout source code
 
 - task: NodeTool@0
   displayName: Use Node.js 20
   inputs:
-    versionSpec: '20.x'
+    versionSpec: 20.x
 
-# Clean backend first because pom.xml deletes the static directory
 - script: |
-    set -e
-
-    JAVA_PATH="$(readlink -f "$(command -v java)")"
-    export JAVA_HOME="$(dirname "$(dirname "$JAVA_PATH")")"
-    export PATH="$JAVA_HOME/bin:$PATH"
-
-    java -version
-    mvn -version
-
     mvn -B clean
-  workingDirectory: '$(System.DefaultWorkingDirectory)/$(backendPath)'
-  displayName: Clean Spring Boot project
+  workingDirectory: '$(backendPath)'
+  displayName: Clean backend
 
 - script: |
-    set -e
-
     npm ci
     npm run build
-
-    echo "===== React build files ====="
-    find dist -maxdepth 3 -type f -print
-
     test -f dist/index.html
-  workingDirectory: '$(System.DefaultWorkingDirectory)/$(frontendPath)'
-  displayName: Build React frontend
+  workingDirectory: '$(frontendPath)'
+  displayName: Build frontend
 
 - script: |
-    set -e
+    mkdir -p "$(backendPath)/src/main/resources/static"
+    cp -r "$(frontendPath)/dist/." \
+          "$(backendPath)/src/main/resources/static/"
+  displayName: Copy frontend
 
-    DIST_DIR="$(System.DefaultWorkingDirectory)/$(frontendPath)/dist"
-    STATIC_DIR="$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
-
-    mkdir -p "$STATIC_DIR"
-    cp -r "$DIST_DIR/." "$STATIC_DIR/"
-
-    echo "===== Spring Boot static files ====="
-    find "$STATIC_DIR" -maxdepth 3 -type f -print
-
-    test -f "$STATIC_DIR/index.html"
-  displayName: Copy frontend into Spring Boot
-
-# Do not use clean here
 - script: |
-    set -e
-
-    JAVA_PATH="$(readlink -f "$(command -v java)")"
-    export JAVA_HOME="$(dirname "$(dirname "$JAVA_PATH")")"
-    export PATH="$JAVA_HOME/bin:$PATH"
-
     mvn -B package -DskipTests
-  workingDirectory: '$(System.DefaultWorkingDirectory)/$(backendPath)'
-  displayName: Package Spring Boot JAR
+  workingDirectory: '$(backendPath)'
+  displayName: Build JAR
 
 - script: |
-    set -e
-
-    JAVA_PATH="$(readlink -f "$(command -v java)")"
-    export JAVA_HOME="$(dirname "$(dirname "$JAVA_PATH")")"
-    export PATH="$JAVA_HOME/bin:$PATH"
-
-    cd "$(System.DefaultWorkingDirectory)/$(backendPath)"
-
-    JAR_FILE=$(find target -maxdepth 1 \
+    JAR_FILE=$(find "$(backendPath)/target" \
+      -maxdepth 1 \
       -type f \
       -name "*.jar" \
       ! -name "*.jar.original" \
-      ! -name "*-sources.jar" \
-      ! -name "*-javadoc.jar" \
       -print -quit)
 
-    if [ -z "$JAR_FILE" ]; then
-      echo "ERROR: Deployable JAR not found"
-      exit 1
-    fi
+    test -n "$JAR_FILE"
+    jar tf "$JAR_FILE" | grep -q \
+      "BOOT-INF/classes/static/index.html"
 
-    echo "Selected JAR: $JAR_FILE"
-
-    echo "===== Verify index.html inside JAR ====="
-    jar tf "$JAR_FILE" | grep "BOOT-INF/classes/static/index.html"
-
-    echo "===== Verify frontend assets inside JAR ====="
-    jar tf "$JAR_FILE" | grep "BOOT-INF/classes/static/assets/"
-
-    mkdir -p "$(Build.ArtifactStagingDirectory)"
     cp "$JAR_FILE" "$(Build.ArtifactStagingDirectory)/banking-app.jar"
-
-    ls -lh "$(Build.ArtifactStagingDirectory)/banking-app.jar"
-  displayName: Verify and prepare deployment JAR
+  displayName: Verify JAR
 
 - task: AzureWebApp@1
-  displayName: Deploy to Azure App Service
+  displayName: Deploy application
   inputs:
-    azureSubscription: '$(azureServiceConnection)'
-    appType: 'webAppLinux'
+    azureSubscription: '$(serviceConnection)'
+    appType: webAppLinux
     appName: '$(webAppName)'
     package: '$(Build.ArtifactStagingDirectory)/banking-app.jar'
-    deploymentMethod: 'auto'
