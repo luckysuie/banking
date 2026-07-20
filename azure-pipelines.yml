@@ -11,59 +11,51 @@ pool:
 variables:
   frontendPath: digital-banking-web
   backendPath: digital-banking-platform
-
   azureServiceConnection: banking-service-connec
   webAppName: bankingwebapp
 
 steps:
 
-# Checkout source code
 - checkout: self
   clean: true
 
-# Verify installed tools
 - script: |
-    java -version
-    mvn -version
-    node -v
-    npm -v
+    java --version
+    mvn --version
+    node --version
+    npm --version
     git --version
     az --version
-  displayName: Verify Build Tools
+  displayName: Verify Required Tools
 
-# Install frontend dependencies
 - script: |
     npm ci
-  workingDirectory: $(frontendPath)
-  displayName: Install Frontend Dependencies
-
-# Build React application
-- script: |
     npm run build
-  workingDirectory: $(frontendPath)
-  displayName: Build React Application
+  workingDirectory: '$(System.DefaultWorkingDirectory)/$(frontendPath)'
+  displayName: Build React Frontend
 
-# Copy React build into Spring Boot static folder
 - script: |
-    rm -rf $(backendPath)/src/main/resources/static
-    mkdir -p $(backendPath)/src/main/resources/static
-    cp -r $(frontendPath)/dist/. $(backendPath)/src/main/resources/static/
-  displayName: Copy React Build
+    rm -rf "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
+    mkdir -p "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
 
-# Build Spring Boot application
-- task: Maven@4
-  displayName: Build Spring Boot
-  inputs:
-    mavenPomFile: '$(backendPath)/pom.xml'
-    goals: 'clean package'
-    publishJUnitResults: false
+    cp -r "$(System.DefaultWorkingDirectory)/$(frontendPath)/dist/." \
+    "$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static/"
+  displayName: Copy Frontend into Spring Boot
 
-# Deploy to Azure App Service
+- script: |
+    mvn clean package
+  workingDirectory: '$(System.DefaultWorkingDirectory)/$(backendPath)'
+  displayName: Build Spring Boot Application
+
+- script: |
+    ls -lh "$(System.DefaultWorkingDirectory)/$(backendPath)/target/"
+  displayName: Verify Generated JAR
+
 - task: AzureWebApp@1
-  displayName: Deploy to Azure Web App
+  displayName: Deploy to Azure App Service
   inputs:
     azureSubscription: '$(azureServiceConnection)'
     appType: 'webAppLinux'
     appName: '$(webAppName)'
-    package: '$(backendPath)/target/*.jar'
+    package: '$(System.DefaultWorkingDirectory)/$(backendPath)/target/*.jar'
     runtimeStack: 'JAVA|21-java21'
