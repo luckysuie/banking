@@ -15,78 +15,125 @@ variables:
   webAppName: 'bankingwebapp'
 
 steps:
+
+# 1. Checkout repository
 - checkout: self
   clean: true
+  displayName: Checkout source code
 
+# 2. Install/use Node.js
 - task: NodeTool@0
-  displayName: Install Node.js 20
+  displayName: Use Node.js 20
   inputs:
     versionSpec: '20.x'
 
+# 3. Build React frontend
 - script: |
     set -e
+
+    echo "Node version:"
+    node --version
+
+    echo "NPM version:"
+    npm --version
+
     npm ci
     npm run build
 
-    echo "===== Frontend build output ====="
+    echo "===== React build files ====="
     find dist -maxdepth 3 -type f -print
 
-    test -f dist/index.html
+    if [ ! -f dist/index.html ]; then
+      echo "ERROR: dist/index.html was not generated"
+      exit 1
+    fi
   workingDirectory: '$(System.DefaultWorkingDirectory)/$(frontendPath)'
   displayName: Build React frontend
 
+# 4. Copy React build into Spring Boot static resources
 - script: |
     set -e
 
-    STATIC_DIR="$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
     DIST_DIR="$(System.DefaultWorkingDirectory)/$(frontendPath)/dist"
+    STATIC_DIR="$(System.DefaultWorkingDirectory)/$(backendPath)/src/main/resources/static"
 
+    echo "Removing old static resources..."
     rm -rf "$STATIC_DIR"
-    mkdir -p "$STATIC_DIR"
-    cp -rv "$DIST_DIR/." "$STATIC_DIR/"
 
-    echo "===== Files copied into Spring Boot ====="
+    echo "Creating static resources folder..."
+    mkdir -p "$STATIC_DIR"
+
+    echo "Copying React build..."
+    cp -r "$DIST_DIR/." "$STATIC_DIR/"
+
+    echo "===== Spring Boot static files ====="
     find "$STATIC_DIR" -maxdepth 3 -type f -print
 
-    test -f "$STATIC_DIR/index.html"
-  displayName: Copy React build into Spring Boot
+    if [ ! -f "$STATIC_DIR/index.html" ]; then
+      echo "ERROR: index.html was not copied into Spring Boot"
+      exit 1
+    fi
+  displayName: Copy frontend into Spring Boot
 
-- task: Maven@4
-  displayName: Build Spring Boot JAR
-  inputs:
-    mavenPomFile: '$(backendPath)/pom.xml'
-    goals: 'clean package'
-    options: '-DskipTests'
-    javaHomeOption: 'JDKVersion'
-    jdkVersionOption: '1.21'
-    publishJUnitResults: false
-
+# 5. Build Spring Boot using Java already installed on the agent
 - script: |
     set -e
 
-    cd "$(System.DefaultWorkingDirectory)/$(backendPath)"
+    JAVA_PATH="$(readlink -f "$(command -v java)")"
+    export JAVA_HOME="$(dirname "$(dirname "$JAVA_PATH")")"
+    export PATH="$JAVA_HOME/bin:$PATH"
+
+    echo "JAVA_HOME=$JAVA_HOME"
+
+    echo "===== Java version ====="
+    java -version
+
+    echo "===== Maven version ====="
+    mvn -version
+
+    echo "===== Building Spring Boot application ====="
+    mvn -B clean package -DskipTests
+  workingDirectory: '$(System.DefaultWorkingDirectory)/$(backendPath)'
+  displayName: Build Spring Boot JAR
+
+# 6. Verify frontend exists inside the JAR
+- script: |
+    set -e
+
+    BACKEND_DIR="$(System.DefaultWorkingDirectory)/$(backendPath)"
+    STAGING_DIR="$(Build.ArtifactStagingDirectory)"
+
+    cd "$BACKEND_DIR"
 
     JAR_FILE=$(find target -maxdepth 1 \
       -type f \
       -name "*.jar" \
       ! -name "*.jar.original" \
-      | head -n 1)
+      ! -name "*-sources.jar" \
+      ! -name "*-javadoc.jar" \
+      -print -quit)
 
     if [ -z "$JAR_FILE" ]; then
-      echo "No deployable JAR found"
+      echo "ERROR: Deployable JAR was not found"
       exit 1
     fi
 
-    echo "JAR selected: $JAR_FILE"
+    echo "Selected JAR: $JAR_FILE"
 
-    echo "===== Verify frontend inside JAR ====="
+    echo "===== Checking index.html inside JAR ====="
     unzip -l "$JAR_FILE" | grep "BOOT-INF/classes/static/index.html"
-    unzip -l "$JAR_FILE" | grep "BOOT-INF/classes/static/assets/"
 
-    mkdir -p "$(Build.ArtifactStagingDirectory)"
-    cp "$JAR_FILE" "$(Build.ArtifactStagingDirectory)/banking-app.jar"
-  displayName: Verify and stage JAR
+    echo "===== Checking frontend assets inside JAR ====="
+    unzip -l "$JAR_FILE" | grep "BOOT-INF/classes/static/assets/" | head -20
 
+    mkdir -p "$STAGING_DIR"
+    cp "$JAR_FILE" "$STAGING_DIR/banking-app.jar"
+
+    echo "===== Deployment package ====="
+    ls -lh "$STAGING_DIR/banking-app.jar"
+  displayName: Verify and prepare deployment JAR
+
+# 7. Deploy JAR to Azure App Service
 - task: AzureWebApp@1
   displayName: Deploy to Azure App Service
   inputs:
