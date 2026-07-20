@@ -17,7 +17,7 @@ spring:
           property-source-enabled: true
           property-sources:
             - name: cloudbank-keyvault
-              endpoint: https://banking-kv-1234.vault.azure.net/
+              endpoint: https://banking-kv-123478.vault.azure.net/
               secret-keys:
                 - sql-jdbc-url
                 - sql-admin-username
