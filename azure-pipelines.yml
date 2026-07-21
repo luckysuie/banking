@@ -6,13 +6,13 @@ trigger:
 pool:
   name: Banking-Agent-Pool
   demands:
-    - Agent.Name -equals agent
+    - Agent.Name -equals banking-linux-agent
 
 variables:
   frontendPath: digital-banking-web
   backendPath: digital-banking-platform
   serviceConnection: banking-service-connec
-  webAppName: bankingwebapp
+  webAppName: banking-webapp
 
 steps:
 - checkout: self
